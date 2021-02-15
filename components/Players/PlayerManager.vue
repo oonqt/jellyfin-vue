@@ -19,7 +19,7 @@
     >
       <v-hover v-slot="{ hover }">
         <v-card class="player-card" width="100%">
-          <video-player />
+          <video-player ref="videoPlayer" />
           <!-- Mini Player Overlay -->
           <v-fade-transition>
             <v-overlay v-show="hover && isMinimized" absolute>
@@ -84,7 +84,7 @@
                       <v-btn
                         v-if="supportedFeatures.pictureInPicture"
                         icon
-                        disabled
+                        @click="togglePictureInPicture"
                       >
                         <v-icon> mdi-picture-in-picture-bottom-right </v-icon>
                       </v-btn>
@@ -563,6 +563,20 @@ export default Vue.extend({
             }
           ]
         });
+      }
+    },
+    togglePictureInPicture(): void {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      if (document.pictureInPictureElement) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        document.exitPictureInPicture(); // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+      } else if (document.pictureInPictureEnabled) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        this.$refs.videoPlayer.togglePictureInPicture();
       }
     }
   }

@@ -233,6 +233,11 @@ export default Vue.extend({
     },
     onPlayerError(event: ErrorEvent): void {
       this.$emit('error', event);
+    },
+    togglePictureInPicture(): void {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      (this.$refs.videoPlayer as HTMLVideoElement).requestPictureInPicture();
     }
   }
 });
