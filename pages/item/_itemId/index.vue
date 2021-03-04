@@ -281,7 +281,7 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import { mapActions } from 'vuex';
+import { mapActions, mapGetters } from 'vuex';
 import {
   BaseItemDto,
   BaseItemPerson,
@@ -302,28 +302,11 @@ interface TwoColsInfoColumn {
 
 export default Vue.extend({
   mixins: [imageHelper, formsHelper, itemHelper],
-  async asyncData({ params, $api, $auth }) {
-    const item = (
-      await $api.userLibrary.getItem({
-        userId: $auth.user?.Id,
-        itemId: params.itemId
-      })
-    ).data;
-
-    let currentSource: MediaSourceInfo = {};
-
-    if (item.MediaSources && item.MediaSources.length > 0) {
-      currentSource = item.MediaSources[0];
-    }
-
-    return {
-      item,
-      currentSource
-    };
+  async asyncData({ params, $libraries }) {
+    await $libraries.fetchItem(params.itemId);
   },
   data() {
     return {
-      item: {} as BaseItemDto,
       parentItem: {} as BaseItemDto,
       backdropImageSource: '',
       currentSource: {} as MediaSourceInfo,
@@ -338,6 +321,10 @@ export default Vue.extend({
     };
   },
   computed: {
+    ...mapGetters('items', ['getItem']),
+    item(): BaseItemDto {
+      return this.getItem(this.$route.params.itemId);
+    },
     twoColsInfoColumn: {
       get(): TwoColsInfoColumn {
         return {
@@ -427,6 +414,11 @@ export default Vue.extend({
   },
   created() {
     this.setAppBarOpacity({ opaqueAppBar: false });
+  },
+  beforeMount() {
+    if (this.item.MediaSources && this.item.MediaSources.length > 0) {
+      this.currentSource = this.item.MediaSources[0];
+    }
   },
   destroyed() {
     this.setAppBarOpacity({ opaqueAppBar: true });
