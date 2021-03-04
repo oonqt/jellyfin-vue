@@ -73,50 +73,47 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import { mapActions } from 'vuex';
+import { mapActions, mapGetters } from 'vuex';
 import { BaseItemDto, ImageType } from '@jellyfin/client-axios';
 import imageHelper from '~/mixins/imageHelper';
 import timeUtils from '~/mixins/timeUtils';
 
 export default Vue.extend({
   mixins: [imageHelper, timeUtils],
-  async asyncData({ params, $api, $auth }) {
-    const item = (
-      await $api.userLibrary.getItem({
-        userId: $auth.user?.Id,
-        itemId: params.itemId
-      })
-    ).data;
+  async asyncData({ params, $libraries }) {
+    await $libraries.fetchItem(params.itemId);
+    const appearanceIds = await $libraries.fetchItems({
+      personIds: [params.itemId],
+      recursive: true,
+      collapseBoxSetItems: false
+    });
 
-    const appearances = (
-      await $api.items.getItems({
-        userId: $auth.user?.Id,
-        personIds: [params.itemId],
-        recursive: true,
-        collapseBoxSetItems: false
-      })
-    ).data.Items;
-
-    return { item, appearances };
+    return { appearanceIds };
   },
   data() {
     return {
-      item: {} as BaseItemDto,
-      appearances: [] as BaseItemDto[]
+      appearanceIds: [] as string[]
     };
   },
   computed: {
+    ...mapGetters('items', ['getItem', 'getItems']),
+    item(): BaseItemDto {
+      return this.getItem(this.$route.params.itemId);
+    },
+    appearances(): BaseItemDto[] {
+      return this.getItems(this.appearanceIds);
+    },
     birthDate(): Date | null {
-      if (this.$data.item.PremiereDate) {
-        return new Date(this.$data.item.PremiereDate);
+      if (this.item.PremiereDate) {
+        return new Date(this.item.PremiereDate);
       } else {
         return null;
       }
     },
     deathDate: {
       get(): Date | null {
-        if (this.$data.item.EndDate) {
-          return new Date(this.$data.item.EndDate);
+        if (this.item.EndDate) {
+          return new Date(this.item.EndDate);
         } else {
           return null;
         }
@@ -124,8 +121,8 @@ export default Vue.extend({
     },
     birthPlace: {
       get(): string | null {
-        if (this.$data.item.ProductionLocations) {
-          return this.$data.item.ProductionLocations[0];
+        if (this.item.ProductionLocations) {
+          return this.item.ProductionLocations[0];
         } else {
           return null;
         }
@@ -133,7 +130,7 @@ export default Vue.extend({
     },
     movies: {
       get(): BaseItemDto[] {
-        return this.$data.appearances
+        return this.appearances
           .filter((appearance: BaseItemDto) => {
             return appearance.Type === 'Movie';
           })
@@ -142,7 +139,7 @@ export default Vue.extend({
     },
     shows: {
       get(): BaseItemDto[] {
-        return this.$data.appearances
+        return this.appearances
           .filter((appearance: BaseItemDto) => {
             return appearance.Type === 'Series';
           })
