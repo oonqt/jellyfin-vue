@@ -47,44 +47,42 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import { mapActions } from 'vuex';
+import { mapActions, mapGetters } from 'vuex';
 import { BaseItemDto } from '@jellyfin/client-axios';
 import itemHelper from '~/mixins/itemHelper';
 
 export default Vue.extend({
   mixins: [itemHelper],
-  async asyncData({ params, $api, $auth }) {
-    const genre = (
-      await $api.userLibrary.getItem({
-        userId: $auth.user?.Id,
-        itemId: params.itemId
-      })
-    ).data;
-
-    return { genre };
+  async asyncData({ params, $libraries }) {
+    await $libraries.fetchItem(params.itemId);
   },
   data() {
     return {
-      genre: [] as BaseItemDto,
-      items: [] as BaseItemDto[]
+      itemIds: [] as string[]
     };
   },
   async fetch() {
-    this.items = (
-      await this.$api.items.getItems({
-        userId: this.$auth.user?.Id,
-        genreIds: [this.$route.params.itemId],
-        includeItemTypes: [this.$route.query.type.toString()],
-        recursive: true,
-        sortBy: 'SortName',
-        sortOrder: 'Ascending'
-      })
-    ).data.Items;
+    this.itemIds = await this.$libraries.fetchItems({
+      genreIds: [this.$route.params.itemId],
+      includeItemTypes: [this.$route.query.type.toString()],
+      recursive: true,
+      sortBy: 'SortName',
+      sortOrder: 'Ascending'
+    });
   },
   head() {
     return {
       title: this.$store.state.page.title
     };
+  },
+  computed: {
+    ...mapGetters('items', ['getItem', 'getItems']),
+    genre(): BaseItemDto {
+      return this.getItem(this.$route.params.itemId);
+    },
+    items(): BaseItemDto[] {
+      return this.getItems(this.itemIds);
+    }
   },
   beforeMount() {
     this.setAppBarOpacity({ opaqueAppBar: true });
