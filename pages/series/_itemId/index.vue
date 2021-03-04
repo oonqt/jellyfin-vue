@@ -180,12 +180,7 @@
 <script lang="ts">
 import Vue from 'vue';
 import { mapActions } from 'vuex';
-import {
-  BaseItemDto,
-  BaseItemPerson,
-  ImageType,
-  MediaSourceInfo
-} from '@jellyfin/client-axios';
+import { BaseItemDto, BaseItemPerson, ImageType } from '@jellyfin/client-axios';
 import imageHelper from '~/mixins/imageHelper';
 import formsHelper from '~/mixins/formsHelper';
 import itemHelper from '~/mixins/itemHelper';
@@ -208,15 +203,8 @@ export default Vue.extend({
       })
     ).data;
 
-    let currentSource: MediaSourceInfo = {};
-
-    if (item.MediaSources && item.MediaSources.length > 0) {
-      currentSource = item.MediaSources[0];
-    }
-
     return {
-      item,
-      currentSource
+      item
     };
   },
   data() {
@@ -224,7 +212,6 @@ export default Vue.extend({
       item: {} as BaseItemDto,
       parentItem: {} as BaseItemDto,
       backdropImageSource: '',
-      currentSource: {} as MediaSourceInfo,
       currentVideoTrack: undefined as number | undefined,
       currentAudioTrack: undefined as number | undefined,
       currentSubtitleTrack: undefined as number | undefined
@@ -259,13 +246,6 @@ export default Vue.extend({
           rCols: 12,
           rSm: 10
         };
-      }
-    },
-    currentSourceIndex: {
-      get(): number | undefined {
-        return this.item.MediaSources?.findIndex(
-          (source) => source === this.currentSource
-        );
       }
     },
     isPlayable: {
