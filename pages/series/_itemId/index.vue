@@ -179,7 +179,7 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import { mapActions } from 'vuex';
+import { mapActions, mapGetters } from 'vuex';
 import { BaseItemDto, BaseItemPerson, ImageType } from '@jellyfin/client-axios';
 import imageHelper from '~/mixins/imageHelper';
 import formsHelper from '~/mixins/formsHelper';
@@ -195,21 +195,11 @@ interface TwoColsInfoColumn {
 
 export default Vue.extend({
   mixins: [imageHelper, formsHelper, itemHelper],
-  async asyncData({ params, $api, $auth }) {
-    const item = (
-      await $api.userLibrary.getItem({
-        userId: $auth.user?.Id,
-        itemId: params.itemId
-      })
-    ).data;
-
-    return {
-      item
-    };
+  async asyncData({ params, $libraries }) {
+    await $libraries.fetchItem(params.itemId);
   },
   data() {
     return {
-      item: {} as BaseItemDto,
       parentItem: {} as BaseItemDto,
       backdropImageSource: '',
       currentVideoTrack: undefined as number | undefined,
@@ -223,6 +213,10 @@ export default Vue.extend({
     };
   },
   computed: {
+    ...mapGetters('items', ['getItem']),
+    item(): BaseItemDto {
+      return this.getItem(this.$route.params.itemId);
+    },
     crew(): BaseItemPerson[] {
       let crew: BaseItemPerson[] = [];
       if (this.item.People) {
