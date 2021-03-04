@@ -112,7 +112,7 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import { mapActions } from 'vuex';
+import { mapActions, mapGetters } from 'vuex';
 import { BaseItemDto, ImageType } from '@jellyfin/client-axios';
 import htmlHelper from '~/mixins/htmlHelper';
 import imageHelper from '~/mixins/imageHelper';
@@ -121,32 +121,21 @@ import itemHelper from '~/mixins/itemHelper';
 
 export default Vue.extend({
   mixins: [htmlHelper, imageHelper, timeUtils, itemHelper],
-  async asyncData({ params, $api, $auth }) {
-    const item = (
-      await $api.userLibrary.getItem({
-        userId: $auth.user?.Id,
-        itemId: params.itemId
-      })
-    ).data;
-
-    const appearances = (
-      await $api.items.getItems({
-        userId: $auth.user?.Id,
-        albumArtistIds: [params.itemId],
-        sortBy: 'PremiereDate,ProductionYear,SortName',
-        sortOrder: 'Descending',
-        recursive: true,
-        includeItemTypes: ['MusicAlbum']
-      })
-    ).data.Items;
-
-    return { item, appearances };
+  async asyncData({ params, $libraries }) {
+    await $libraries.fetchItem(params.itemId);
+    const appearanceIds = await $libraries.fetchItems({
+      albumArtistIds: [params.itemId],
+      sortBy: 'PremiereDate,ProductionYear,SortName',
+      sortOrder: 'Descending',
+      recursive: true,
+      includeItemTypes: ['MusicAlbum']
+    });
+    return { appearanceIds };
   },
   data() {
     return {
       activeTab: 0,
-      item: {} as BaseItemDto,
-      appearances: [] as BaseItemDto[]
+      appearanceIds: [] as string[]
     };
   },
   head() {
@@ -155,9 +144,16 @@ export default Vue.extend({
     };
   },
   computed: {
+    ...mapGetters('items', ['getItem', 'getItems']),
+    appearances(): BaseItemDto[] {
+      return this.getItems(this.appearanceIds);
+    },
+    item(): BaseItemDto {
+      return this.getItem(this.$route.params.itemId);
+    },
     overview(): string {
-      if (this.$data.item.Overview) {
-        return this.sanitizeHtml(this.$data.item.Overview);
+      if (this.item.Overview) {
+        return this.sanitizeHtml(this.item.Overview);
       } else {
         return '';
       }
