@@ -19,7 +19,13 @@
 
 <script lang="ts">
 import Vue from 'vue';
+import { mapGetters } from 'vuex';
 import { BaseItemDto, ImageType, ItemFields } from '@jellyfin/client-axios';
+
+interface ItemId {
+  itemId: string;
+  relatedItemId: string | undefined;
+}
 
 export default Vue.extend({
   props: {
@@ -30,48 +36,52 @@ export default Vue.extend({
   },
   data() {
     return {
-      items: [] as BaseItemDto[],
-      relatedItems: {} as { [k: number]: BaseItemDto },
+      ids: [] as ItemId[],
       loading: true,
       show: false,
       extraText: ''
     };
   },
+  computed: {
+    ...mapGetters('items', ['getItem', 'getItems']),
+    items(): BaseItemDto[] {
+      return this.getItems(this.ids.map((el) => el.itemId));
+    },
+    relatedItems(): BaseItemDto[] {
+      return this.getItems(this.ids.map((el) => el.relatedItemId));
+    }
+  },
   async beforeMount() {
-    this.items = (
-      await this.$api.userLibrary.getLatestMedia({
-        userId: this.$auth.user?.Id,
-        limit: this.pages,
-        fields: [ItemFields.Overview],
-        enableImageTypes: [ImageType.Backdrop, ImageType.Logo],
-        imageTypeLimit: 1
-      })
-    ).data;
+    const itemIds = await this.$libraries.fetchLatestMedia({
+      limit: this.pages,
+      fields: [ItemFields.Overview],
+      enableImageTypes: [ImageType.Backdrop, ImageType.Logo],
+      imageTypeLimit: 1
+    });
 
     // TODO: Server should include a ParentImageBlurhashes property, so we don't need to do a call
     // for the parent items. Revisit this once proper changes are done.
 
-    for (const [key, i] of this.items.entries()) {
-      let id: string;
-      if (i.Type === 'Episode' && i?.SeriesId) {
-        id = i.SeriesId;
-      } else if (i.Type === 'MusicAlbum' && i?.AlbumArtists?.[0]?.Id) {
-        id = i.AlbumArtists[0]?.Id;
-      } else if (i?.ParentLogoItemId) {
-        id = i.ParentLogoItemId;
-      } else {
-        continue;
-      }
+    this.ids = await Promise.all(
+      itemIds.map(async (itemId) => {
+        const res: ItemId = { itemId, relatedItemId: undefined };
+        const item: BaseItemDto = this.getItem(itemId);
 
-      const itemData = (
-        await this.$api.userLibrary.getItem({
-          userId: this.$auth.user?.Id,
-          itemId: id
-        })
-      ).data;
+        if (item.Type === 'Episode' && item?.SeriesId) {
+          res.relatedItemId = item.SeriesId;
+        } else if (item.Type === 'MusicAlbum' && item?.AlbumArtists?.[0]?.Id) {
+          res.relatedItemId = item.AlbumArtists[0]?.Id;
+        } else if (item?.ParentLogoItemId) {
+          res.relatedItemId = item.ParentLogoItemId;
+        }
 
-      this.relatedItems[key] = itemData;
-    }
+        if (res.relatedItemId) {
+          await this.$libraries.fetchItem(res.relatedItemId);
+        }
+
+        return res;
+      })
+    );
 
     if (this.items.length === 0) {
       this.extraText = this.$t('homeHeader.welcome.noItems');
