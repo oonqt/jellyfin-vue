@@ -15,6 +15,7 @@ import { ClientSettingsState } from './clientSettings';
 import { websocketPlugin } from './plugins/websocket';
 import { preferencesSync } from './plugins/preferencesSyncPlugin';
 import { userPlugin } from './plugins/userPlugin';
+import { ItemsState } from './items';
 
 export const plugins = [websocketPlugin, preferencesSync, userPlugin];
 
