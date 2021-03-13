@@ -1,4 +1,4 @@
-import compareVersions from 'compare-versions';
+import Versions from 'compare-versions';
 import { ActionTree, MutationTree } from 'vuex';
 import { PublicSystemInfo } from '@jellyfin/client-axios';
 
@@ -49,7 +49,7 @@ export const actions: ActionTree<ServerState, ServerState> = {
 
       const { data } = await this.$api.system.getPublicSystemInfo();
 
-      if (compareVersions.compare(data.Version || '', '10.7.0', '>=')) {
+      if (true) {
         if (!data.StartupWizardCompleted) {
           this.$router.push('/wizard');
         } else {
